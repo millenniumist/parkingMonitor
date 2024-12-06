@@ -11,8 +11,8 @@ class SerialPortService {
         }
     
         const sttyCommand = os.platform() === 'darwin' 
-        ? `stty -f ${config.serialPortFile} 9600 cs8 -cstopb -parenb`
-        : `stty -F ${config.serialPortFile} 9600 cs8 -cstopb -parenb`;
+        ? `stty -f ${config.serialPortFile} 57600 cs8 -cstopb -parenb`
+        : `stty -F ${config.serialPortFile} 57600 cs8 -cstopb -parenb`;
 
     exec(sttyCommand, (execErr) => {
         if (execErr) {

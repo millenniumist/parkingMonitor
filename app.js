@@ -69,8 +69,8 @@ app.use(express.json());
 app.set('view engine', 'ejs');
 app.use('/', routes);
 
-const server = app.listen(config.port, '0.0.0.0', async () => {
-    console.log(`Server running at http://0.0.0.0:${config.port}`);
+const server = app.listen(config.port, async () => {
+    console.log(`Server running at http://localhost:${config.port}`);
     try {
         await SerialPortService.checkPort();
         SerialPortService.configurePort();

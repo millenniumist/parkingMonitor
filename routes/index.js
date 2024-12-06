@@ -24,10 +24,24 @@ const updateClock = () => {
     
     const hours = String(bangkokTime.getHours()).padStart(2, '0');
     const minutes = String(bangkokTime.getMinutes()).padStart(2, '0');
-    const message = ` ${hours}:${minutes}`;
+    const seconds = String(bangkokTime.getSeconds()).padStart(2, '0');
     
+    // Get day and date info
+    const days = ['SUNDAY','MONDAY','TUESDAY','WEDNESDAY','THURSDAY','FRIDAY','SATURDAY'];
+    const dayName = days[bangkokTime.getDay()];
+    const date = String(bangkokTime.getDate()).padStart(2, '0');
+    const month = String(bangkokTime.getMonth() + 1).padStart(2, '0');
+
+    // Center both lines in 10-char space
+    const line1 = ` ${hours}:${minutes}:${seconds} `;
+    const line2 = ` ${date}.${month} ${dayName.slice(0, 3)} `;
+    
+    const message = `${line1},${line2}`;
     SerialPortService.displayMessage(message);
 };
+
+
+
 
 const startDisplayClockToLEDMatrix = () => {
     if (!clockInterval) {
@@ -86,7 +100,7 @@ router.get('/charges', (req, res) => {
         amount: req.query.amount || "0.0"
     };
 
-    const licensePlate = `${persistedData.plateLetter}-${persistedData.plateNumber}`;
+    const licensePlate = `${persistedData.plateLetter}${persistedData.plateNumber}`;
     stopDisplayClockToLEDMatrix();
     displayParkingFeeToLEDMatrix(licensePlate, persistedData.amount);
     res.status(204).end();
@@ -101,11 +115,14 @@ router.get('/clock', (req, res) => {
 
 router.get('/thankyou', (req, res) => {
     viewMode = "THANK_YOU";
-    persistedData = {};
+    const licensePlate = persistedData.plateLetter && persistedData.plateNumber ? 
+        `${persistedData.plateLetter}${persistedData.plateNumber}` : "";
+    
     stopDisplayClockToLEDMatrix();
-    SerialPortService.displayMessage("ขอบคุณที่ใช้บริการ");
+    SerialPortService.displayMessage(`${licensePlate},ขอบคุณค่ะ`);
     res.status(204).end();
 });
+
 
 router.get('/events', (req, res) => {
     res.setHeader('Content-Type', 'text/event-stream');

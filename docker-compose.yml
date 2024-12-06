@@ -1,4 +1,3 @@
-version: '3'
 services:
   parking-monitor:
     image: parking-monitor:latest
