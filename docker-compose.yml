@@ -1,0 +1,15 @@
+version: '3'
+services:
+  parking-monitor:
+    image: parking-monitor:latest
+    restart: always
+    devices:
+      - /dev/ttyUSB0:/dev/ttyUSB0
+    ports:
+      - "3031:3030"
+    environment:
+      - NODE_ENV=production
+      - APP_SERIAL_PORT_FILE=/dev/ttyUSB0
+      - APP_ENABLED_LED_MATRIX=true
+    volumes:
+      - ./log:/app/log

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Parking Monitor</title>
+    <style>
+      body {
+        padding: 20px;
+        font-family: Arial, sans-serif;
+      }
+      .display-box {
+        border: 1px solid #ccc;
+        padding: 10px;
+        margin: 10px 0;
+        width: 300px;
+      }
+      .control-panel {
+        margin: 20px 0;
+      }
+      button {
+        margin: 5px;
+        padding: 10px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Parking Monitor Display</h1>
+
+    <div class="display-box">
+      <h3>License Plate</h3>
+      <p id="plateLine1"><%= displayPlateLine1 %></p>
+      <p id="plateLine2"><%= displayPlateLine2 %></p>
+    </div>
+
+    <div class="display-box">
+      <h3>Parking Fee</h3>
+      <p id="feeLine1">฿<%= displayFeeLine1 %></p>
+    </div>
+
+    <div class="control-panel">
+      <button onclick="showClock()">Show Clock</button>
+      <button onclick="showThankYou()">Show Thank You</button>
+    </div>
+
+    <script>
+      // SSE Connection
+      const evtSource = new EventSource("/events");
+      evtSource.onmessage = function (event) {
+        const data = JSON.parse(event.data);
+        updateDisplay(data);
+      };
+
+      function updateDisplay(data) {
+        if (data.plateLetter && data.plateNumber) {
+          document.getElementById(
+            "plateLine1"
+          ).textContent = `${data.plateLetter} - ${data.plateNumber}`;
+        }
+
+        if (data.plateProvince) {
+          document.getElementById("plateLine2").textContent = data.plateProvince;
+        }
+
+        if (data.amount) {
+          document.getElementById("feeLine1").textContent = `฿${data.amount}`;
+        }
+
+        console.log("Display updated with:", data);
+      }
+
+      function showClock() {
+        fetch("/clock");
+      }
+
+      function showThankYou() {
+        fetch("/thankyou");
+      }
+
+      // Handle page unload
+      window.onbeforeunload = function () {
+        evtSource.close();
+      };
+    </script>
+  </body>
+</html>
