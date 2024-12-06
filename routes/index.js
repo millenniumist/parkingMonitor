@@ -143,4 +143,20 @@ router.get('/events', (req, res) => {
     });
 });
 
+// Add this new route after your existing routes
+router.get('/blacklisted', (req, res) => {
+    viewMode = "BLACKLIST";
+    
+    // First message
+    SerialPortService.displayMessage("ไม่อนุญาติให้จอดเกิน 24 ชั่วโมง โปรดรอเจ้่าหน้าที่");
+    
+    // Second message after 3 seconds
+    setTimeout(() => {
+        SerialPortService.displayMessage("  โปรดรอ, เจ้่าหน้าที่");
+    }, 30000);
+    
+    res.status(204).end();
+});
+
+
 module.exports = router;

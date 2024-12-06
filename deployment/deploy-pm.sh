@@ -22,13 +22,23 @@ echo "Creating directory on Pi..."
 ssh $PI_HOST "mkdir -p $PI_PATH"
 
 echo "Copying files to Pi..."
-scp docker-compose.yml parking-monitor.tar ./deployment/* $PI_HOST:$PI_PATH/
+scp docker-compose.yml parking-monitor.tar ./deployment/parking-monitor.service $PI_HOST:$PI_PATH/
 
-echo "Setting up systemd service..."
-ssh $PI_HOST "sudo cp $PI_PATH/parking-monitor.service /etc/systemd/system/ && \
-              sudo chmod +x $PI_PATH/run-pm.sh && \
-              sudo systemctl daemon-reload && \
-              sudo systemctl enable parking-monitor && \
-              sudo systemctl restart parking-monitor"
+echo "Deploying to Pi..."
+ssh $PI_HOST "cd $PI_PATH && \
+    docker compose down && \
+    docker load -i parking-monitor.tar && \
+    docker compose up -d && \
+    sudo cp parking-monitor.service /etc/systemd/system/ && \
+    sudo systemctl daemon-reload && \
+    sudo systemctl enable parking-monitor && \
+    sudo systemctl restart parking-monitor"
+
+# Check statuses
+echo "Checking service status..."
+ssh $PI_HOST "sudo systemctl status parking-monitor"
+
+echo "Checking Docker containers status..."
+ssh $PI_HOST "cd $PI_PATH && docker compose ps"
 
 echo "Deployment complete!"
