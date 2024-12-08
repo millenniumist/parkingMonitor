@@ -4,6 +4,59 @@ const os = require('os');
 const config = require('../config/config');
 
 class SerialPortService {
+
+    static currentInterval = null;
+    static SCROLL_DELAY = 150; // Faster scroll speed (was 300)
+    static DISPLAY_WIDTH = 10;
+    static PADDING = '     '; // More padding for smoother transition
+
+    static displayMessage(message) {
+        this.stopDynamic(); // Stop any existing dynamic display
+        if (config.isDevelopment) {
+            console.log('Display message (development):', message);
+            return;
+        }
+        
+        if (config.serialPortFile) {
+            exec(`echo "${message}" > ${config.serialPortFile}`);
+        }
+    }
+
+    static displayDynamicMessage(message) {
+        this.stopDynamic(); // Stop any existing dynamic display
+        
+        if (config.isDevelopment) {
+            console.log('Display dynamic message (development):', message);
+            return;
+        }
+
+        let position = 0;
+        this.currentInterval = setInterval(() => {
+            const [line1, line2] = message.split(',');
+            const shiftedLine1 = this.shiftText(line1, position);
+            const shiftedLine2 = line2 ? this.shiftText(line2, position) : '';
+            const displayMessage = line2 ? `${shiftedLine1},${shiftedLine2}` : shiftedLine1;
+            
+            if (config.serialPortFile) {
+                exec(`echo "${displayMessage}" > ${config.serialPortFile}`);
+            }
+            
+            position = (position + 1) % (line1.length + this.PADDING.length);
+        }, this.SCROLL_DELAY);
+    }
+
+    static shiftText(text, position) {
+        const paddedText = text + this.PADDING + text;
+        return paddedText.substring(position, position + this.DISPLAY_WIDTH);
+    }
+
+    static stopDynamic() {
+        if (this.currentInterval) {
+            clearInterval(this.currentInterval);
+            this.currentInterval = null;
+        }
+    }
+
     static configurePort() {
         if (config.isDevelopment) {
             console.log('Development mode: Serial port configuration simulated');
@@ -48,17 +101,6 @@ static checkPort() {
     });
 }
 
-
-    static displayMessage(message) {
-        if (config.isDevelopment) {
-            console.log('Display message (development):', message);
-            return;
-        }
-        
-        if (config.serialPortFile) {
-            exec(`echo "${message}" > ${config.serialPortFile}`);
-        }
-    }
 }
 
 module.exports = SerialPortService;
