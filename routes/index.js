@@ -45,7 +45,7 @@ const updateClock = () => {
     const month = String(bangkokTime.getMonth() + 1).padStart(2, '0');
 
     const line1 = ` ${hours}:${minutes}:${seconds} `;
-    const line2 = `${date}.${month} ${dayName.slice(0, 3)}`;
+    const line2 = `${date}.${month}.${dayName.slice(0, 3)}`;
     
     const message = `${line1},${line2}`;
     SerialPortService.displayMessage(message);

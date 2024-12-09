@@ -1,51 +1,44 @@
 #!/bin/bash
-set -e  # Exit on error
-
-# Configuration
 PI_HOST="pi@192.168.68.121"
 PI_PATH="/home/pi/parking-monitor"
-IMAGE_NAME="parking-monitor:latest"
-TAR_FILE="parking-monitor.tar"
 
-# SSH key setup
+# Setup SSH key if not exists
 if [ ! -f ~/.ssh/id_rsa ]; then
     echo "Generating SSH key..."
-    ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa || { echo "Failed to generate SSH key"; exit 1; }
+    ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa
 fi
 
-# Copy SSH key
-ssh-copy-id -o StrictHostKeyChecking=no $PI_HOST || { echo "Failed to copy SSH key"; exit 1; }
+# Copy SSH key to Pi (will ask for password only once)z
+ssh-copy-id -o StrictHostKeyChecking=no $PI_HOST
 
-# Build and save
+# Build and deploy
 echo "Building Docker image..."
-docker build -t $IMAGE_NAME . || { echo "Docker build failed"; exit 1; }
+docker build -t parking-monitor:latest .
 
 echo "Saving Docker image..."
-docker save $IMAGE_NAME > $TAR_FILE || { echo "Failed to save Docker image"; exit 1; }
+docker save parking-monitor:latest > parking-monitor.tar
 
-# Deploy
-echo "Creating directory and copying files..."
-ssh $PI_HOST "mkdir -p $PI_PATH" || { echo "Failed to create directory"; exit 1; }
-scp docker-compose.yml $TAR_FILE ./deployment/parking-monitor.service $PI_HOST:$PI_PATH/ || { echo "Failed to copy files"; exit 1; }
+echo "Creating directory on Pi..."
+ssh $PI_HOST "mkdir -p $PI_PATH"
+
+echo "Copying files to Pi..."
+scp docker-compose.yml parking-monitor.tar ./deployment/parking-monitor.service $PI_HOST:$PI_PATH/
 
 echo "Deploying to Pi..."
 ssh $PI_HOST "cd $PI_PATH && \
     docker compose down && \
-    docker load -i $TAR_FILE && \
+    docker load -i parking-monitor.tar && \
     docker compose up -d && \
     sudo cp parking-monitor.service /etc/systemd/system/ && \
     sudo systemctl daemon-reload && \
     sudo systemctl enable parking-monitor && \
-    sudo systemctl restart parking-monitor" || { echo "Deployment failed"; exit 1; }
+    sudo systemctl restart parking-monitor"
 
-# Status checks
+# Check statuses
 echo "Checking service status..."
 ssh $PI_HOST "sudo systemctl status parking-monitor"
+
 echo "Checking Docker containers status..."
 ssh $PI_HOST "cd $PI_PATH && docker compose ps"
-
-# Cleanup
-ssh $PI_HOST "cd $PI_PATH && rm $TAR_FILE"
-rm $TAR_FILE
 
 echo "Deployment complete!"
