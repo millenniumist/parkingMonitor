@@ -121,7 +121,7 @@ router.get('/thankyou', (req, res) => {
     const licensePlate = persistedData.plateLetter && persistedData.plateNumber ? 
         `${persistedData.plateLetter}${persistedData.plateNumber}` : "";
     
-    SerialPortService.displayMessage(`${licensePlate},ขอบคุณค่ะ`);
+    SerialPortService.displayDynamicMessage(`${licensePlate},ขอบคุณค่ะ`);
     res.status(204).end();
 });
 

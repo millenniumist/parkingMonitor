@@ -1,14 +1,35 @@
 #!/bin/bash
-PI_HOST="pi@192.168.68.121"
+PI_HOST="pi@192.168.106.139"
 PI_PATH="/home/pi/parking-monitor"
 
-# Setup SSH key if not exists
-if [ ! -f ~/.ssh/id_rsa ]; then
-    echo "Generating SSH key..."
-    ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa
-fi
+# Function to update SSH known hosts
+update_ssh_connection() {
+    echo "Cleaning up old SSH known hosts entry..."
+    ssh-keygen -R $(echo $PI_HOST | cut -d@ -f2)
+}
 
-# Copy SSH key to Pi (will ask for password only once)z
+# Function to test connection
+test_connection() {
+    echo "Testing connection to Pi..."
+    if ! ping -c 1 $(echo $PI_HOST | cut -d@ -f2) &> /dev/null; then
+        echo "Cannot reach Pi at ${PI_HOST}"
+        echo "Please enter new Pi IP address:"
+        read new_ip
+        PI_HOST="pi@${new_ip}"
+        update_ssh_connection
+    fi
+}
+
+# # Setup SSH key if not exists
+# if [ ! -f ~/.ssh/id_rsa ]; then
+#     echo "Generating SSH key..."
+#     ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa
+# fi
+
+# Test and update connection if needed
+test_connection
+
+# Copy SSH key to Pi (will ask for password only once)
 ssh-copy-id -o StrictHostKeyChecking=no $PI_HOST
 
 # Build and deploy

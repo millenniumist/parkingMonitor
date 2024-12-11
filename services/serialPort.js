@@ -29,12 +29,12 @@ class SerialPortService {
             console.log('Display dynamic message (development):', message);
             return;
         }
-
+    
         let position = 0;
         this.currentInterval = setInterval(() => {
             const [line1, line2] = message.split(',');
             const shiftedLine1 = this.shiftText(line1, position);
-            const shiftedLine2 = line2 ? this.shiftText(line2, position) : '';
+            const shiftedLine2 = line2 ? line2.substring(0, this.DISPLAY_WIDTH) : '';
             const displayMessage = line2 ? `${shiftedLine1},${shiftedLine2}` : shiftedLine1;
             
             if (config.serialPortFile) {
@@ -44,6 +44,7 @@ class SerialPortService {
             position = (position + 1) % (line1.length + this.PADDING.length);
         }, this.SCROLL_DELAY);
     }
+    
 
     static shiftText(text, position) {
         const paddedText = text + this.PADDING + text;
