@@ -4,11 +4,11 @@ After=docker.service
 Requires=docker.service
 
 [Service]
-Type=oneshot
-RemainAfterExit=yes
+Type=simple
 WorkingDirectory=/home/pi/parking-monitor
-ExecStart=/home/pi/parking-monitor/run-pm.sh
-ExecStop=/usr/local/bin/docker compose down
+ExecStart=/usr/bin/docker compose -p pm up
+ExecStop=/usr/bin/docker compose -p pm down
+Restart=always
 
 [Install]
 WantedBy=multi-user.target

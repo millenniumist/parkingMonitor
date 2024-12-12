@@ -1,6 +1,7 @@
 services:
-  parking-monitor:
+  app:
     image: parking-monitor:latest
+    privileged: true
     restart: always
     devices:
       - /dev/ttyUSB0:/dev/ttyUSB0
@@ -12,3 +13,4 @@ services:
       - APP_ENABLED_LED_MATRIX=true
     volumes:
       - ./log:/app/log
+      - ./scripts:/scripts“

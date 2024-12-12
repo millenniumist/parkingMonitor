@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const path = require('path');
 const SerialPortService = require('../services/serialPort');
 
 let persistedData = {};
@@ -138,6 +139,22 @@ router.get('/blacklisted', (req, res) => {
     
     res.status(204).end();
 });
+
+router.get('/reset-usb', (req, res) => {
+    const { exec } = require('child_process');
+    const scriptPath = path.join(__dirname, '../scripts/reset-usb.sh');
+    
+    exec(scriptPath, (error, stdout, stderr) => {
+        if (error) {
+            res.status(500).json({ message: 'USB reset failed', error: error.message });
+            return;
+        }
+        res.json({ message: 'USB reset successful' });
+    });
+});
+
+
+
 
 router.get('/events', (req, res) => {
     res.setHeader('Content-Type', 'text/event-stream');
