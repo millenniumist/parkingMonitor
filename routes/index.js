@@ -2,11 +2,15 @@ const express = require('express');
 const router = express.Router();
 const path = require('path');
 const SerialPortService = require('../services/serialPort');
+const { serialPortFile } = require('../config/config');
+const { exec } = require('child_process');
+
 
 let persistedData = {};
 let viewMode = "CLOCK";
 let clockInterval;
 let currentTimeout = null;  // Add this line
+const BASE_URL = 'http://localhost:3030'
 
 // Clear any existing timeouts/intervals
 const clearExistingTimers = () => {
@@ -20,51 +24,58 @@ const clearExistingTimers = () => {
     }
 };
 
-const displayParkingFeeToLEDMatrix = (licensePlate, amount) => {
-    const amountString = amount.toString();
-    const amountWithFraction = amount.toLocaleString('th-TH', { 
-        minimumFractionDigits: 0, 
-        maximumFractionDigits: 0 
-    });
-    const formattedAmount = `฿${amountWithFraction}`;
-    const message = `${licensePlate},${formattedAmount}`;
-    SerialPortService.displayDynamicMessage(message);
-};
 
-const updateClock = () => {
-    const now = new Date();
-    const utcTime = now.getTime() + now.getTimezoneOffset() * 60000;
-    const bangkokTime = new Date(utcTime + (3600000 * 7));
+
+const handleClockDisplay = () => {
+    const formatTime = (date) => {
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+        return `${hours}:${minutes}:${seconds}`;
+    };
+
+    const formatDate = (date) => {
+        const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+        const dayName = days[date.getDay()];
+        const dateNum = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        return `${dateNum}.${month}.${dayName.slice(0, 3)}`;
+    };
+
+    setInterval(() => {
+        const now = new Date();
+        const ms = now.getMilliseconds();
+        const seconds = now.getSeconds();
+        
+        // Reset USB at 700ms of second 59 using the HTTP endpoint
+        if (seconds === 59 && ms >= 10) {
+            fetch(`${BASE_URL}/reset-usb`)
+                .catch(error => console.log('USB reset failed:', error));
+        }
+    }, 50);
+
+    const displayClock = () => {
+        const now = new Date();
+        const utcTime = now.getTime() + now.getTimezoneOffset() * 60000;
+        const bangkokTime = new Date(utcTime + (3600000 * 7));
+        
+        const line1 = ` ${formatTime(bangkokTime)} `;
+        const line2 = formatDate(bangkokTime);
+        const message = `${line1},${line2}`;
+        
+        SerialPortService.displayMessage(message, 'white');
+    };
+
+    // Initial display
+    displayClock();
     
-    const hours = String(bangkokTime.getHours()).padStart(2, '0');
-    const minutes = String(bangkokTime.getMinutes()).padStart(2, '0');
-    const seconds = String(bangkokTime.getSeconds()).padStart(2, '0');
-    
-    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-    const dayName = days[bangkokTime.getDay()];
-    const date = String(bangkokTime.getDate()).padStart(2, '0');
-    const month = String(bangkokTime.getMonth() + 1).padStart(2, '0');
-
-    const line1 = ` ${hours}:${minutes}:${seconds} `;
-    const line2 = `${date}.${month}.${dayName.slice(0, 3)}`;
-    
-    const message = `${line1},${line2}`;
-    SerialPortService.displayMessage(message);
+    // Regular clock display interval
+    return setInterval(displayClock, 1000);
 };
 
-const startDisplayClockToLEDMatrix = () => {
-    if (!clockInterval) {
-        updateClock();
-        clockInterval = setInterval(updateClock, 1000);
-    }
-};
 
-const stopDisplayClockToLEDMatrix = () => {
-    if (clockInterval) {
-        clearInterval(clockInterval);
-        clockInterval = null;
-    }
-};
+
+
 
 router.get('/', (req, res) => {
     clearExistingTimers();
@@ -100,11 +111,12 @@ router.get('/charges', (req, res) => {
         plateLetter: req.query.plateLetter || "",
         plateNumber: req.query.plateNumber || "",
         plateProvince: req.query.plateProvince || "",
-        amount: req.query.amount || "0.0"
+        amount: req.query.amount || "฿0"
     };
 
     const licensePlate = `${persistedData.plateLetter}${persistedData.plateNumber}`;
-    displayParkingFeeToLEDMatrix(licensePlate, persistedData.amount);
+    const message = `${licensePlate},฿${persistedData.amount}`;
+    SerialPortService.displayDynamicMessage(message);
     res.status(204).end();
 });
 
@@ -112,16 +124,16 @@ router.get('/clock', (req, res) => {
     clearExistingTimers();
     viewMode = "CLOCK";
     persistedData = {};
-    startDisplayClockToLEDMatrix();
+    clockInterval = handleClockDisplay();
     res.status(204).end();
 });
+
 
 router.get('/thankyou', (req, res) => {
     clearExistingTimers();
     viewMode = "THANK_YOU";
     const licensePlate = persistedData.plateLetter && persistedData.plateNumber ? 
         `${persistedData.plateLetter}${persistedData.plateNumber}` : "";
-    
     SerialPortService.displayDynamicMessage(`${licensePlate},ขอบคุณค่ะ`);
     res.status(204).end();
 });
@@ -129,7 +141,6 @@ router.get('/thankyou', (req, res) => {
 router.get('/blacklisted', (req, res) => {
     clearExistingTimers();
     viewMode = "BLACKLIST";
-    
     SerialPortService.displayMessage("ไม่อนุญาติ คุณจอดเกิน 24 ชั่วโมง กรุณาติดต่อ หรือรอเจ้่าหน้าที่");
     
     currentTimeout = setTimeout(() => {
@@ -141,7 +152,6 @@ router.get('/blacklisted', (req, res) => {
 });
 
 router.get('/reset-usb', (req, res) => {
-    const { exec } = require('child_process');
     const scriptPath = path.join(__dirname, '../scripts/reset-usb.sh');
     
     exec(scriptPath, (error, stdout, stderr) => {
@@ -153,7 +163,15 @@ router.get('/reset-usb', (req, res) => {
     });
 });
 
-
+router.get('/clear', (req,res) => {
+    try {
+        clearExistingTimers();
+        SerialPortService.clearDisplay();
+    } catch (error) {
+        console.error('Error clearing display:', error);
+    }
+    res.status(204).end();
+})
 
 
 router.get('/events', (req, res) => {

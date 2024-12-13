@@ -9,8 +9,29 @@ class SerialPortService {
     static SCROLL_DELAY = 150; // Faster scroll speed (was 300)
     static DISPLAY_WIDTH = 10;
     static PADDING = '     '; // More padding for smoother transition
+    static COLOR = {
+        RED: 1,
+        GREEN: 2,
+        BLUE: 3,
+        PINK: 4,
+        YELLOW: 5,
+        CYAN: 6,
+        WHITE: 7,
+    }
 
-    static displayMessage(message) {
+    static changeColor(color = 'RED') {
+        if (config.isDevelopment) {
+            console.log('Color change (development):', color);
+            return;
+        }
+        
+        const colorValue = this.COLOR[color.toUpperCase()] || this.COLOR.RED;
+        exec(`echo "#${colorValue}" > ${config.serialPortFile}`);
+    }
+    
+
+    static displayMessage(message, color = 'RED') {
+        this.changeColor(color);
         this.stopDynamic(); // Stop any existing dynamic display
         if (config.isDevelopment) {
             console.log('Display message (development):', message);
@@ -22,7 +43,8 @@ class SerialPortService {
         }
     }
 
-    static displayDynamicMessage(message) {
+    static displayDynamicMessage(message, color = 'RED') {
+        this.changeColor(color);
         this.stopDynamic(); // Stop any existing dynamic display
         
         if (config.isDevelopment) {
@@ -55,6 +77,17 @@ class SerialPortService {
         if (this.currentInterval) {
             clearInterval(this.currentInterval);
             this.currentInterval = null;
+        }
+    }
+
+    static clearDisplay() {
+        if (config.isDevelopment) {
+            console.log('Clear display (development)');
+            return;
+        }
+        this.stopDynamic();
+        if (config.serialPortFile) {
+            exec(`echo "" > ${config.serialPortFile}`);
         }
     }
 

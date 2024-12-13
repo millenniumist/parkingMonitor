@@ -47,7 +47,7 @@ setup_usb_permissions() {
         sudo udevadm trigger && \
         for port in \$(ls /dev/ttyUSB* 2>/dev/null); do sudo chmod 777 \$port; done && \
         sudo sh -c 'echo 0 > /sys/bus/usb/devices/usb1/authorized' && \
-        sleep 2 && \
+        sleep 0.1 && \
         sudo sh -c 'echo 1 > /sys/bus/usb/devices/usb1/authorized'"
 }
 
@@ -107,7 +107,7 @@ rm parking-monitor.tar
 
 # Setup USB devices
 setup_usb_permissions
-sleep 3  # Allow USB device to fully initialize
+sleep 1  # Allow USB device to fully initialize
 verify_usb_device
 ssh $PI_HOST "curl http://localhost:3031/clock"
 
