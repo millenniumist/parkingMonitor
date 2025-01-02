@@ -1,5 +1,5 @@
 #!/bin/bash
-PI_HOST="pi@192.168.68.121"
+PI_HOST="pi@192.168.106.154"
 PI_PATH="/home/pi/parking-monitor"
 
 # Function to update SSH known hosts
@@ -39,19 +39,22 @@ cleanup_services() {
         sudo systemctl daemon-reload"
 }
 
-# Function to setup USB permissions
-setup_usb_permissions() {
-    echo "Setting up USB permissions..."
-    ssh $PI_HOST "sudo usermod -a -G dialout pi && \
-        sudo udevadm control --reload-rules && \
-        sudo udevadm trigger && \
-        for port in \$(ls /dev/ttyUSB* 2>/dev/null); do sudo chmod 777 \$port; done && \
-        sudo sh -c 'echo 0 > /sys/bus/usb/devices/usb1/authorized' && \
-        sleep 0.1 && \
-        sudo sh -c 'echo 1 > /sys/bus/usb/devices/usb1/authorized'"
+check_docker() {
+    echo "Checking Docker installation on Pi..."
+    if ! ssh $PI_HOST "command -v docker > /dev/null"; then
+        echo "Installing Docker on Pi..."
+        ssh $PI_HOST "curl -fsSL https://get.docker.com -o get-docker.sh && \
+            sudo sh get-docker.sh && \
+            sudo usermod -aG docker pi"
+    fi
+
+    echo "Checking Docker Compose installation..."
+    if ! ssh $PI_HOST "command -v docker-compose > /dev/null"; then
+        echo "Installing Docker Compose on Pi..."
+        ssh $PI_HOST "sudo apt update && sudo apt install -y docker-compose"
+    fi
 }
 
-# Function to verify USB device
 verify_usb_device() {
     echo "Verifying USB device..."
     ssh $PI_HOST "sudo ls -l /dev/ttyUSB* && \
@@ -62,6 +65,7 @@ verify_usb_device() {
 # Main deployment flow
 echo "Starting deployment process..."
 test_connection
+check_docker
 
 # Copy SSH key to Pi
 ssh-copy-id -o StrictHostKeyChecking=no $PI_HOST
@@ -106,9 +110,11 @@ ssh $PI_HOST "cd $PI_PATH && docker compose -p pm ps"
 rm parking-monitor.tar
 
 # Setup USB devices
-setup_usb_permissions
+# setup_usb_permissions
+ssh $PI_HOST "curl http://localhost:3031/reset-usb"
 sleep 1  # Allow USB device to fully initialize
 verify_usb_device
 ssh $PI_HOST "curl http://localhost:3031/clock"
+
 
 echo "Deployment complete!"
