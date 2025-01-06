@@ -8,10 +8,9 @@ const fs = require("fs");
 let persistedData = {};
 let viewMode = "CLOCK";
 let clockInterval;
-let currentTimeout = null; // Add this line
+let currentTimeout = null;
 const BASE_URL = "http://localhost:3030";
 
-// Clear any existing timeouts/intervals
 const clearExistingTimers = () => {
   if (currentTimeout) {
     clearTimeout(currentTimeout);
@@ -45,150 +44,200 @@ const handleClockDisplay = () => {
   };
 
   const displayClock = () => {
-    const now = new Date();
-    const utcTime = now.getTime() + now.getTimezoneOffset() * 60000;
-    const bangkokTime = new Date(utcTime + 3600000 * 7);
+    try {
+      const now = new Date();
+      const utcTime = now.getTime() + now.getTimezoneOffset() * 60000;
+      const bangkokTime = new Date(utcTime + 3600000 * 7);
 
-    const line1 = `${formatTime(bangkokTime)}`;
-    const line2 = formatDate(bangkokTime);
-    const message = `${line1},${line2}`;
+      const line1 = `${formatTime(bangkokTime)}`;
+      const line2 = formatDate(bangkokTime);
+      const message = `${line1},${line2}`;
 
-    if (bangkokTime.getSeconds() === 59 && bangkokTime.getMilliseconds() < 20) {
+      if (bangkokTime.getSeconds() === 59 && bangkokTime.getMilliseconds() < 20) {
         resetUSB();
-    }
+      }
 
-    SerialPortService.displayMessage(message, "white");
+      SerialPortService.displayMessage(message, "white");
+    } catch (error) {
+      console.error('Clock display error:', error);
+    }
   };
 
-  // Initial display
   displayClock();
-
-  // Set up interval
   return setInterval(displayClock, 1000);
 };
 
 router.get("/", (req, res) => {
-  clearExistingTimers();
-  const { plateLetter, plateNumber, plateProvince, amount } = req.query;
-  const isPlateInfoComplete = plateLetter && plateNumber && plateProvince;
+  try {
+    clearExistingTimers();
+    const { plateLetter, plateNumber, plateProvince, amount } = req.query;
+    const isPlateInfoComplete = plateLetter && plateNumber && plateProvince;
 
-  const renderData = {
-    displayPlateLine1: isPlateInfoComplete ? `${plateLetter} - ${plateNumber}` : "",
-    displayPlateLine2: plateProvince,
-    displayFeeLine1: isPlateInfoComplete ? amount : "0.0",
-  };
-  res.render("index", renderData);
+    const renderData = {
+      displayPlateLine1: isPlateInfoComplete ? `${plateLetter} - ${plateNumber}` : "",
+      displayPlateLine2: plateProvince,
+      displayFeeLine1: isPlateInfoComplete ? amount : "0.0",
+    };
+    res.render("index", renderData);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 router.get("/plateInfo", (req, res) => {
-  clearExistingTimers();
-  viewMode = "PLATE";
-  persistedData = {
-    plateLetter: req.query.plateLetter || "",
-    plateNumber: req.query.plateNumber || "",
-    plateProvince: req.query.plateProvince || "",
-  };
+  try {
+    clearExistingTimers();
+    viewMode = "PLATE";
+    persistedData = {
+      plateLetter: req.query.plateLetter || "",
+      plateNumber: req.query.plateNumber || "",
+      plateProvince: req.query.plateProvince || "",
+    };
 
-  const message = `${persistedData.plateLetter}-${persistedData.plateNumber}`;
-  SerialPortService.displayMessage(message);
-  res.status(204).end();
+    const message = `${persistedData.plateLetter}-${persistedData.plateNumber}`;
+    SerialPortService.displayMessage(message);
+    res.status(204).end();
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 router.get("/charges", (req, res) => {
-  clearExistingTimers();
-  viewMode = "CHARGE";
-  persistedData = {
-    plateLetter: req.query.plateLetter || "",
-    plateNumber: req.query.plateNumber || "",
-    plateProvince: req.query.plateProvince || "",
-    amount: req.query.amount || "฿0",
-  };
+  try {
+    clearExistingTimers();
+    viewMode = "CHARGE";
+    persistedData = {
+      plateLetter: req.query.plateLetter || "",
+      plateNumber: req.query.plateNumber || "",
+      plateProvince: req.query.plateProvince || "",
+      amount: req.query.amount || "฿0",
+    };
 
-  const licensePlate = `${persistedData.plateLetter}${persistedData.plateNumber}`;
-  const message = `${licensePlate},฿${persistedData.amount}`;
-  SerialPortService.displayDynamicMessage(message);
-  res.status(204).end();
+    const licensePlate = `${persistedData.plateLetter}${persistedData.plateNumber}`;
+    const message = `${licensePlate},฿${persistedData.amount}`;
+    SerialPortService.displayDynamicMessage(message);
+    res.status(204).end();
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 router.get("/clock", (req, res) => {
-  clearExistingTimers();
-  viewMode = "CLOCK";
-  persistedData = {};
-  clockInterval = handleClockDisplay();
-  res.status(204).end();
+  try {
+    clearExistingTimers();
+    viewMode = "CLOCK";
+    persistedData = {};
+    clockInterval = handleClockDisplay();
+    res.status(204).end();
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 router.get("/thankyou", (req, res) => {
-  clearExistingTimers();
-  viewMode = "THANK_YOU";
-  const licensePlate =
-    persistedData.plateLetter && persistedData.plateNumber
-      ? `${persistedData.plateLetter}${persistedData.plateNumber}`
-      : "";
-  SerialPortService.displayDynamicMessage(`${licensePlate},ขอบคุณค่ะ`);
-  res.status(204).end();
+  try {
+    clearExistingTimers();
+    viewMode = "THANK_YOU";
+    
+    const plateLetter = req.query.plateLetter || persistedData.plateLetter || "";
+    const plateNumber = req.query.plateNumber || persistedData.plateNumber || "";
+    const licensePlate = plateLetter && plateNumber ? `${plateLetter}${plateNumber}` : "";
+    
+    SerialPortService.displayDynamicMessage(`${licensePlate},ขอบคุณค่ะ`);
+    res.status(204).end();
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 router.get("/welcome", (req, res) => {
-  clearExistingTimers();
-  viewMode = "WELCOME";
-  const licensePlate =
-    persistedData.plateLetter && persistedData.plateNumber
-      ? `${persistedData.plateLetter}${persistedData.plateNumber}`
-      : "";
-  SerialPortService.displayDynamicBothLines(`${licensePlate},ยินดีต้อนรับ`);;
-  res.status(204).end();
+  try {
+    clearExistingTimers();
+    viewMode = "WELCOME";
+    
+    const plateLetter = req.query.plateLetter || persistedData.plateLetter || "";
+    const plateNumber = req.query.plateNumber || persistedData.plateNumber || "";
+    const licensePlate = plateLetter && plateNumber ? `${plateLetter}${plateNumber}` : "";
+    
+    SerialPortService.displayDynamicBothLines(`${licensePlate},ยินดีต้อนรับ`);
+    res.status(204).end();
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
-
+router.get("/forbidden", (req, res) => {
+  try {
+    clearExistingTimers();
+    viewMode = "FORBIDDEN";
+    SerialPortService.displayDynamicMessage(`กรุณาติดต่อประชาสัมพันธ์,ไม่อนุญาติ`);
+    res.status(204).end();
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 router.get("/blacklisted", (req, res) => {
-  clearExistingTimers();
-  viewMode = "BLACKLIST";
-  SerialPortService.displayMessage(
-    "ไม่อนุญาติ คุณจอดเกิน 24 ชั่วโมง กรุณาติดต่อ หรือรอเจ้่าหน้าที่"
-  );
+  try {
+    clearExistingTimers();
+    viewMode = "BLACKLIST";
+    SerialPortService.displayMessage("ไม่อนุญาติ กรุณาติดต่อเจ้่าหน้าที่");
 
-  currentTimeout = setTimeout(() => {
-    SerialPortService.displayMessage("  โปรดรอ, เจ้่าหน้าที่");
-    currentTimeout = null;
-  }, 30000);
+    currentTimeout = setTimeout(() => {
+      SerialPortService.displayMessage("  ติดต่อ, เจ้่าหน้าที่");
+      currentTimeout = null;
+    }, 30000);
 
-  res.status(204).end();
+    res.status(204).end();
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 router.get("/reset-usb", (req, res) => {
+  try {
     resetUSB();
     res.status(204).end();
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 router.get("/clear", (req, res) => {
   try {
     clearExistingTimers();
     SerialPortService.clearDisplay();
+    res.status(204).end();
   } catch (error) {
-    console.error("Error clearing display:", error);
+    res.status(500).json({ error: error.message });
   }
-  res.status(204).end();
 });
 
 router.get("/events", (req, res) => {
-  res.setHeader("Content-Type", "text/event-stream");
-  res.setHeader("Cache-Control", "no-cache");
-  res.setHeader("Connection", "keep-alive");
-  res.flushHeaders();
+  try {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.flushHeaders();
 
-  const sendUpdate = () => {
-    persistedData.viewMode = viewMode;
-    res.write(`data: ${JSON.stringify(persistedData)}\n\n`);
-  };
+    const sendUpdate = () => {
+      try {
+        persistedData.viewMode = viewMode;
+        res.write(`data: ${JSON.stringify(persistedData)}\n\n`);
+      } catch (error) {
+        console.error('SSE update error:', error);
+      }
+    };
 
-  sendUpdate();
-  const intervalId = setInterval(sendUpdate, 1000);
+    sendUpdate();
+    const intervalId = setInterval(sendUpdate, 1000);
 
-  req.on("close", () => {
-    clearInterval(intervalId);
-  });
+    req.on("close", () => {
+      clearInterval(intervalId);
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
 });
 
 module.exports = router;
