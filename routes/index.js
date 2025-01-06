@@ -129,6 +129,19 @@ router.get("/thankyou", (req, res) => {
   res.status(204).end();
 });
 
+router.get("/welcome", (req, res) => {
+  clearExistingTimers();
+  viewMode = "WELCOME";
+  const licensePlate =
+    persistedData.plateLetter && persistedData.plateNumber
+      ? `${persistedData.plateLetter}${persistedData.plateNumber}`
+      : "";
+  SerialPortService.displayDynamicBothLines(`${licensePlate},ยินดีต้อนรับ`);;
+  res.status(204).end();
+});
+
+
+
 router.get("/blacklisted", (req, res) => {
   clearExistingTimers();
   viewMode = "BLACKLIST";

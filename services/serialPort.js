@@ -91,6 +91,31 @@ class SerialPortService {
         }
     }
 
+    static displayDynamicBothLines(message, color = 'RED') {
+        this.changeColor(color);
+        this.stopDynamic();
+        
+        if (config.isDevelopment) {
+            console.log('Display dynamic both lines (development):', message);
+            return;
+        }
+    
+        let position = 0;
+        this.currentInterval = setInterval(() => {
+            const [line1, line2] = message.split(',');
+            const shiftedLine1 = this.shiftText(line1, position);
+            const shiftedLine2 = this.shiftText(line2, position);
+            const displayMessage = `${shiftedLine1},${shiftedLine2}`;
+            
+            if (config.serialPortFile) {
+                exec(`echo "${displayMessage}" > ${config.serialPortFile}`);
+            }
+            
+            position = (position + 1) % (Math.max(line1.length, line2.length) + this.PADDING.length);
+        }, this.SCROLL_DELAY);
+    }
+    
+
     static configurePort() {
         if (config.isDevelopment) {
             console.log('Development mode: Serial port configuration simulated');
