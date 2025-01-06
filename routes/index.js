@@ -41,7 +41,7 @@ const handleClockDisplay = () => {
     const dayName = days[date.getDay()];
     const dateNum = String(date.getDate()).padStart(2, "0");
     const month = String(date.getMonth() + 1).padStart(2, "0");
-    return `${dateNum}.${month}.${dayName.slice(0, 3)}`;
+    return `${dateNum}.${month}.${dayName.slice(0, 2).toUpperCase()}`;
   };
 
   const displayClock = () => {
