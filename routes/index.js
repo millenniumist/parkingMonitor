@@ -168,7 +168,7 @@ router.get("/blacklisted", (req, res) => {
     viewMode = "BLACKLIST";
     
     const isMember = req.query.isMember === 'true';
-    const displayColor = isMember ? 'green' : 'white';
+    const displayColor = isMember ? 'red' : 'white';
     
     SerialPortService.displayMessage("ไม่อนุญาต กรุณาติดต่อเจ้่าหน้าที่", displayColor);
 
