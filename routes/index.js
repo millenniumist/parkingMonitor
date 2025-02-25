@@ -36,12 +36,16 @@ const handleClockDisplay = () => {
   };
 
   const formatDate = (date) => {
-    const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const dayName = days[date.getDay()];
     const dateNum = String(date.getDate()).padStart(2, "0");
     const month = String(date.getMonth() + 1).padStart(2, "0");
-    return `${dateNum}.${month}.${dayName.slice(0, 2).toUpperCase()}`;
+    // Calculate Buddhist year (543 years ahead of Gregorian calendar)
+    const buddhistYear = date.getFullYear() + 543;
+    // Get only the last 2 digits of the Buddhist year
+    const shortYear = String(buddhistYear).slice(-2);
+    return `${dateNum}.${month}.${shortYear}`;
   };
+  
+  
 
   const displayClock = () => {
     try {
@@ -115,7 +119,7 @@ router.get("/charges", (req, res) => {
 
     const licensePlate = `${persistedData.plateLetter}${persistedData.plateNumber}`;
     const message = `${licensePlate},฿${persistedData.amount}`;
-    SerialPortService.displayDynamicMessage(message);
+    SerialPortService.displayDynamicMessage(message, "green");
     res.status(204).end();
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -134,22 +138,9 @@ router.get("/clock", (req, res) => {
   }
 });
 
-router.get("/thankyou", (req, res) => {
-  try {
-    clearExistingTimers();
-    viewMode = "THANK_YOU";
-    
-    const plateLetter = req.query.plateLetter || persistedData.plateLetter || "";
-    const plateNumber = req.query.plateNumber || persistedData.plateNumber || "";
-    const licensePlate = plateLetter && plateNumber ? `${plateLetter}${plateNumber}` : "";
-    
-    SerialPortService.displayDynamicMessage(`${licensePlate},ขอบคุณค่ะ`);
-    res.status(204).end();
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
 
+
+//ขาเข้า
 router.get("/welcome", (req, res) => {
   try {
     clearExistingTimers();
@@ -157,34 +148,32 @@ router.get("/welcome", (req, res) => {
     
     const plateLetter = req.query.plateLetter || persistedData.plateLetter || "";
     const plateNumber = req.query.plateNumber || persistedData.plateNumber || "";
+    const isMember = req.query.isMember === 'true';
+    const displayColor = isMember ? 'green' : 'white';
     const licensePlate = plateLetter && plateNumber ? `${plateLetter}${plateNumber}` : "";
     
-    SerialPortService.displayDynamicBothLines(`${licensePlate},ยินดีต้อนรับ`);
+    // Different message based on member status
+    const welcomeMessage = isMember ? 'ยินดีต้อนรับ' : 'ผู้มาติดต่อ กรุณารับสลิป';
+    
+    SerialPortService.displayDynamicBothLines(`${licensePlate},${welcomeMessage}`, displayColor);
     res.status(204).end();
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
-
-router.get("/forbidden", (req, res) => {
-  try {
-    clearExistingTimers();
-    viewMode = "FORBIDDEN";
-    SerialPortService.displayDynamicMessage(`กรุณาติดต่อประชาสัมพันธ์,ไม่อนุญาติ`);
-    res.status(204).end();
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
+//ขาเข้า ไม่ให้เข้า
 router.get("/blacklisted", (req, res) => {
   try {
     clearExistingTimers();
     viewMode = "BLACKLIST";
-    SerialPortService.displayMessage("ไม่อนุญาติ กรุณาติดต่อเจ้่าหน้าที่");
+    
+    const isMember = req.query.isMember === 'true';
+    const displayColor = isMember ? 'green' : 'white';
+    
+    SerialPortService.displayMessage("ไม่อนุญาต กรุณาติดต่อเจ้่าหน้าที่", displayColor);
 
     currentTimeout = setTimeout(() => {
-      SerialPortService.displayMessage("  ติดต่อ, เจ้่าหน้าที่");
+      SerialPortService.displayMessage("  ติดต่อ, เจ้่าหน้าที่", displayColor);
       currentTimeout = null;
     }, 30000);
 
@@ -193,6 +182,45 @@ router.get("/blacklisted", (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
+//ขาออก ขอบคุณเพิ่ม Params isMember
+router.get("/thankyou", (req, res) => {
+  try {
+    clearExistingTimers();
+    viewMode = "THANK_YOU";
+    
+    const plateLetter = req.query.plateLetter || persistedData.plateLetter || "";
+    const plateNumber = req.query.plateNumber || persistedData.plateNumber || "";
+    const isMember = req.query.isMember === 'true';
+    const displayColor = isMember ? 'green' : 'white';
+    const licensePlate = plateLetter && plateNumber ? `${plateLetter}${plateNumber}` : "";
+    
+    SerialPortService.displayDynamicMessage(`${licensePlate},ขอบคุณค่ะ`, displayColor);
+    res.status(204).end();
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+//ขาออก ไม่ให้ออก
+router.get("/forbidden", (req, res) => {
+  try {
+    clearExistingTimers();
+    viewMode = "FORBIDDEN";
+    
+    const isMember = req.query.isMember === 'true';
+    const displayColor = isMember ? 'green' : 'white';
+    
+    SerialPortService.displayDynamicMessage(`กรุณาติดต่อเจ้าหน้าที่,ไม่อนุญาต`, displayColor);
+    res.status(204).end();
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+
+
 
 router.get("/reset-usb", (req, res) => {
   try {

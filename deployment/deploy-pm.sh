@@ -1,5 +1,5 @@
 #!/bin/bash
-PI_HOSTS=("pi@192.168.106.152" "pi@192.168.106.151" "pi@192.168.106.159"  "pi@192.168.106.154"  )
+PI_HOSTS=("pi@192.168.68.121" )
 PI_PATH="/home/pi/parking-monitor"
 
 # Function to update SSH known hosts
