@@ -77,9 +77,6 @@ const handleClockDisplay = () => {
       const line2 = formatDate(bangkokTime);
       const message = `${line1},${line2}`;
 
-      if (bangkokTime.getSeconds() === 59 && bangkokTime.getMilliseconds() < 20) {
-        resetUSB();
-      }
 
       SerialPortService.displayMessage(message, "white");
     } catch (error) {

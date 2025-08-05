@@ -77,6 +77,30 @@ const server = app.listen(config.port, async () => {
     } catch (error) {
         console.error('Serial port error:', error);
     }
+    
+    // Schedule USB reset every minute
+    console.log('Starting scheduled USB reset every minute...');
+    setInterval(() => {
+        try {
+            console.log('Scheduled USB reset triggered at:', new Date().toISOString());
+            // Make internal API call to reset USB
+            const http = require('http');
+            const req = http.request({
+                hostname: 'localhost',
+                port: config.port,
+                path: '/reset-usb',
+                method: 'GET'
+            }, (res) => {
+                console.log(`USB reset response: ${res.statusCode}`);
+            });
+            req.on('error', (err) => {
+                console.error('USB reset request error:', err.message);
+            });
+            req.end();
+        } catch (error) {
+            console.error('Scheduled USB reset error:', error.message);
+        }
+    }, 60000); // Every 60 seconds
 });
 
 
