@@ -23,8 +23,28 @@ const clearExistingTimers = () => {
 };
 
 const resetUSB = () => {
-  fs.writeFileSync("/sys/bus/usb/devices/usb1/authorized", "0");
-  fs.writeFileSync("/sys/bus/usb/devices/usb1/authorized", "1");
+  try {
+    // Try multiple USB paths that might work on different systems
+    const usbPaths = [
+      "/sys/bus/usb/devices/usb1/authorized",
+      "/sys/bus/usb/devices/1-0:1.0/authorized",
+      "/sys/bus/usb/devices/usb2/authorized"
+    ];
+    
+    for (const path of usbPaths) {
+      try {
+        if (fs.existsSync(path)) {
+          fs.writeFileSync(path, "0");
+          fs.writeFileSync(path, "1");
+          return; // Success, exit early
+        }
+      } catch (pathError) {
+        // Continue to next path
+      }
+    }
+  } catch (error) {
+    console.error('USB Reset failed:', error.message);
+  }
 };
 
 const handleClockDisplay = () => {
